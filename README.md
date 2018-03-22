@@ -8,7 +8,7 @@ starts (using udev) and then, due to current OS bug, `/etc/rc.local` is need to 
 	brcmfmac: brcmf_c_set_joinpref_default: Set join_pref error (-1)
 	brcmfmac: brcmf_cfg80211_connect: BRCMF_C_SET_SSID failed (-1)
 
-Configuring:
+## Configuring:
 
 Here, we are using `uap0` as our Access Point interface name and `192.168.10.1` as our static ip address. Modify if you like but don't forget to do the same on the other files.
 
