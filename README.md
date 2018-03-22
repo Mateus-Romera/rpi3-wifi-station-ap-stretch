@@ -4,10 +4,13 @@ Running the Raspberry Pi 3 Stretch as a WiFi Client (station) and Access Point (
 
 It's has been written about before, but this way is better. The access point device is created before networking
 starts (using udev) and then, due to current OS bug, `/etc/rc.local` is need to starts the WiFi Client after the Access Point, otherwise this will not work and you will be left with dmesg outputs like this:
+
 	brcmfmac: brcmf_c_set_joinpref_default: Set join_pref error (-1)
 	brcmfmac: brcmf_cfg80211_connect: BRCMF_C_SET_SSID failed (-1)
 
 Configuring:
+
+Here, we are using `uap0` as our Access Point interface name and `192.168.10.1` as our static ip address. Modify if you like but don't forget to do the same on the other files.
 
 /etc/network/interfaces.d/ap
 
@@ -28,7 +31,7 @@ Configuring:
 	ACTION=="add", SUBSYSTEM=="ieee80211", KERNEL=="phy0", \
 	RUN+="/sbin/iw phy %k interface add uap0 type __ap"
 
-Do not let DHCPCD manage wpa_supplicant!!
+Do NOT let DHCPCD manage wpa_supplicant!!
 
 	rm -f /lib/dhcpcd/dhcpcd-hooks/10-wpa_supplicant
 
@@ -37,11 +40,12 @@ OR if you don't want to delete it, simply change it's location like the command 
 	mv /lib/dhcpcd/dhcpcd-hooks/10-wpa_supplicant /home/pi/Desktop/10-wpa-supplicant-backup
 
 Set up the client WiFi (station) on wlan0.
-Create `/etc/wpa_supplicant/wpa_supplicant.conf`.  The contents depend on whether your known networks are open, WEP or WPA.  It is probably WPA, and so should look like:
+Create or modify `/etc/wpa_supplicant/wpa_supplicant.conf`.
+The contents depend on whether your known networks are open, WEP or WPA.  It is probably WPA, and so should look like:
 
     ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
     update_config=1
-    country=GB
+    country=BR
     
     network={
 	    ssid="_NAME_SSID_"
@@ -98,8 +102,8 @@ Install the packages you need for DNS, Access Point and Firewall rules.
 	rsn_pairwise=CCMP
 
 Replace `_NAME_AP_SSID_` with the SSID you want for your access point.  
-Replace `_AP_PASSWORD_` with the password for your access point.  Make sure it has
-enough characters to be a legal password! (8 characters minimum).
+Replace `_AP_PASSWORD_` with the password for your access point.
+Make sure it has enough characters to be a legal password! (8 characters minimum).
 
 /etc/default/hostapd
 
@@ -152,5 +156,7 @@ If you can't execute the commands above because of permission denied, use the co
 	_STATIC_IP_AP_    raspberrypi
 
 Add the last line to your file and replace `_STATIC_IP_AP_` with your static ip AP chosen, the same one as the `/etc/network/interfaces.d/ap` file.
+
+(OPTIONAL 3) Firewall rules (testing)
 
 Reboot your Pi board, just to be on the safe side and see if all the changes will persist.
