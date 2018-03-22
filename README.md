@@ -1,4 +1,4 @@
-# RASPBERRY PI 3 - WIFI CLIENT STATION AND ACCESS POINT SIMULTANEOUSLY
+## RASPBERRY PI 3 - WIFI CLIENT STATION AND ACCESS POINT SIMULTANEOUSLY
 
 Running the Raspberry Pi 3 Stretch as a WiFi Client (station) and Access Point (AP) from the single built-in wifi.
 
@@ -8,7 +8,7 @@ starts (using udev) and then, due to current OS bug, `/etc/rc.local` is need to 
 	brcmfmac: brcmf_c_set_joinpref_default: Set join_pref error (-1)
 	brcmfmac: brcmf_cfg80211_connect: BRCMF_C_SET_SSID failed (-1)
 
-## Configuring:
+### Configuring:
 
 Here, we are using `uap0` as our Access Point interface name and `192.168.10.1` as our static ip address. Modify if you like but don't forget to do the same on the other files.
 
@@ -133,7 +133,7 @@ Edit `/etc/rc.local` and add the following lines just before "exit 0":
 	ifup wlan0
 	iptables -t nat -A POSTROUTING -s 192.168.2.0/24 ! -d 192.168.2.0.0/24 -j MASQUERADE
 
-(OPTIONAL 1) Bridge AP to client side.
+**(OPTIONAL 1)** Bridge AP to client side.
 If you do this step, then someone connected to the AP side can browse the internet through the client side.
 
 	echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
@@ -144,7 +144,7 @@ If you can't execute the commands above because of permission denied, use the co
 	sudo bash -c 'echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf'
 	sudo bash -c 'echo 1 > /proc/sys/net/ipv4/ip_forward'
 
-(OPTIONAL 2) Also, if you use `raspberrypi.local` to connect to your board via VNC or similar, you can change its DNS name by editing the file on /etc/hosts:
+**(OPTIONAL 2)** Also, if you use `raspberrypi.local` to connect to your board via VNC or similar, you can change its DNS name by editing the file on /etc/hosts:
 
 	ifdown wlan0
 	127.0.0.1       localhost
@@ -157,6 +157,6 @@ If you can't execute the commands above because of permission denied, use the co
 
 Add the last line to your file and replace `_STATIC_IP_AP_` with your static ip AP chosen, the same one as the `/etc/network/interfaces.d/ap` file.
 
-(OPTIONAL 3) Firewall rules (testing)
+**(OPTIONAL 3)** Firewall rules (testing)
 
 Reboot your Pi board, just to be on the safe side and see if all the changes will persist.
