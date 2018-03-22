@@ -1,29 +1,20 @@
-# RASPBERRY PI 3 - WIFI STATION+AP
+# RASPBERRY PI 3 - WIFI CLIENT STATION AND ACCESS POINT SIMULTANEOUSLY
 
-Running the Raspberry Pi 3 as a Wifi client (station) and access point (ap) from the single built-in wifi.
+Running the Raspberry Pi 3 Stretch as a WiFi Client (station) and Access Point (AP) from the single built-in wifi.
 
-Its been written about before, but this way is better.  The access point device is created before networking
-starts (using udev) and there is no need to run anything from `/etc/rc.local`.  No reboot, no scripts.
+It's has been written about before, but this way is better. The access point device is created before networking
+starts (using udev) and then, due to current OS bug, `/etc/rc.local` is need to starts the WiFi Client after the Access Point, otherwise this will not work and you will be left with dmesg outputs like this:
+	brcmfmac: brcmf_c_set_joinpref_default: Set join_pref error (-1)
+	brcmfmac: brcmf_cfg80211_connect: BRCMF_C_SET_SSID failed (-1)
 
-Use Cases
-
-The Rpi 3 wifi chipset can support running an access point and a station function simultaneously.  One
-use case is a device that connects to the cloud (the station, via a user's home wifi network) but
-that needs an admin interface (the access point) to configure the network.  The user powers on the
-device, then logs into the access point using a specified SSID/password.  The user runs a browser
-and connects to the access point IP address (or hostname), which is running a web server to configure
-the station network (the user's wifi).
-
-Another use case might be to create a guest interface to your home wifi.  You can configure the client
-side with your wifi particulars, then configure the access point with a password you can give out to your
-guests.  When the party's over, change the access point password.
+Configuring:
 
 /etc/network/interfaces.d/ap
 
 	allow-hotplug uap0
 	auto uap0
 	iface uap0 inet static
-	address 192.168.2.1
+	address 192.168.10.1
 	netmask 255.255.255.0
 
 /etc/network/interfaces.d/station
@@ -41,37 +32,40 @@ Do not let DHCPCD manage wpa_supplicant!!
 
 	rm -f /lib/dhcpcd/dhcpcd-hooks/10-wpa_supplicant
 
-Set up the client wifi (station) on wlan0.
-Create `/etc/wpa_supplicant/wpa_supplicant.conf`.  The contents depend on whether your home network is open, WEP or WPA.  It is
-probably WPA, and so should look like:
+OR if you don't want to delete it, simply change it's location like the command below:
+
+	mv /lib/dhcpcd/dhcpcd-hooks/10-wpa_supplicant /home/pi/Desktop/10-wpa-supplicant-backup
+
+Set up the client WiFi (station) on wlan0.
+Create `/etc/wpa_supplicant/wpa_supplicant.conf`.  The contents depend on whether your known networks are open, WEP or WPA.  It is probably WPA, and so should look like:
 
     ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+    update_config=1
     country=GB
     
     network={
-	    ssid='ssid'
-	    scan_ssid=1
-	    psk=87654321
+	    ssid="_NAME_SSID_"
+	    psk=_PASSWORD_
 	    key_mgmt=WPA-PSK
     }
 
-Replace 'ssid' with your home network SSID and `87654321` with your wifi password (in clear text).
+Replace `_NAME_SSID_` with your known networks SSID (home, office, any network that you can access) and `_PASSWORD_` with your WiFi password (in clear text).
 
-Restart DHCPCD
+Restart DHCPCD service:
 
 	systemctl restart dhcpcd
 	
-Bring up the station (client) interface
+Bring up the station (Client) interface
 
 	ifup wlan0
 	
-At this point your client wifi should be connected.
+At this point your client WiFi should be connected.
 
 Manually invoke the udev rule for the AP interface.
 
-Execute the command below.  This will also bring up the `uap0` interface.  
+Execute the command below. This will also bring up the `uap0` interface.  
 It will wiggle the network, so you might be kicked off (esp. if you
-are logged into your Pi on wifi).  Just log back on.
+are logged into your Pi on wifi). Just log back on.
 
 	/sbin/iw phy phy0 interface add uap0 type __ap
 	
@@ -86,44 +80,45 @@ Install the packages you need for DNS, Access Point and Firewall rules.
 	no-dhcp-interface=lo,wlan0
 	bind-interfaces
 	server=8.8.8.8
-	dhcp-range=192.168.2.2,192.168.2.254,12h
+	dhcp-range=192.168.10.50,192.168.10.150,12h
 
 /etc/hostapd/hostapd.conf
 
 	interface=uap0
-	ssid=raspberry
+	ssid=_NAME_AP_SSID_
 	hw_mode=g
 	channel=11
 	macaddr_acl=0
 	auth_algs=1
 	ignore_broadcast_ssid=0
 	wpa=2
-	wpa_passphrase=12345678
+	wpa_passphrase=_AP_PASSWORD_
 	wpa_key_mgmt=WPA-PSK
 	wpa_pairwise=TKIP
 	rsn_pairwise=CCMP
 
-Replace `raspberry` with the SSID you want for your access point.  
+Replace `_NAME_AP_SSID_` with the SSID you want for your access point.  
 Replace `_AP_PASSWORD_` with the password for your access point.  Make sure it has
-enough characters to be a legal password!  (8 characters minimum).
+enough characters to be a legal password! (8 characters minimum).
 
 /etc/default/hostapd
 
 	DAEMON_CONF="/etc/hostapd/hostapd.conf"
 
-Now restart the dns and hostapd services
+Now restart the dnsmasq and hostapd services:
 
 	systemctl restart dnsmasq
 	systemctl restart hostapd
 
-Restart the client interface
-The client interface went down for some reason (see below "bringup order").  Bring it back up:
+Restart the client interface:
 
 	ifdown wlan0
 	ifup wlan0
 
-Permanently deal with interface bringup order
-see https://unix.stackexchange.com/questions/396059/unable-to-establish-connection-with-mlme-connect-failed-ret-1-operation-not-p
+Also, if the client interface went down for some reason (see above "bringup order").  Bring it back up.
+
+Permanently deal with interface bringup order:
+See: https://unix.stackexchange.com/questions/396059/unable-to-establish-connection-with-mlme-connect-failed-ret-1-operation-not-p
 	
 Edit `/etc/rc.local` and add the following lines just before "exit 0":
 
@@ -134,14 +129,28 @@ Edit `/etc/rc.local` and add the following lines just before "exit 0":
 	ifup wlan0
 	iptables -t nat -A POSTROUTING -s 192.168.2.0/24 ! -d 192.168.2.0.0/24 -j MASQUERADE
 
-Bridge AP to cient side
-This is optional.  
+(OPTIONAL 1) Bridge AP to client side.
 If you do this step, then someone connected to the AP side can browse the internet through the client side.
 
 	echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
 	echo 1 > /proc/sys/net/ipv4/ip_forward
 	
-Reboot your Pi, just to be on the safe side
-	reboot
+If you can't execute the commands above because of permission denied, use the command below instead:
 
+	sudo bash -c 'echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf'
+	sudo bash -c 'echo 1 > /proc/sys/net/ipv4/ip_forward'
 
+(OPTIONAL 2) Also, if you use `raspberrypi.local` to connect to your board via VNC or similar, you can change its DNS name by editing the file on /etc/hosts:
+
+	ifdown wlan0
+	127.0.0.1       localhost
+	::1             localhost ip6-localhost ip6-loopback
+	ff02::1         ip6-allnodes
+	ff02::2         ip6-allrouters
+	
+	127.0.1.1       raspberrypi
+	_STATIC_IP_AP_    raspberrypi
+
+Add the last line to your file and replace `_STATIC_IP_AP_` with your static ip AP chosen, the same one as the `/etc/network/interfaces.d/ap` file.
+
+Reboot your Pi board, just to be on the safe side and see if all the changes will persist.
